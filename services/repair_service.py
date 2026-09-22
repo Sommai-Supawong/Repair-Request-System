@@ -2,6 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 from enums import ProblemType, RequestStatus, Urgency, UserRole
 from extensions import db
@@ -36,17 +37,25 @@ class RepairService:
         except ValueError as exc:
             raise ValueError("ประเภทปัญหาหรือระดับความเร่งด่วนไม่ถูกต้อง") from exc
 
-        repair = RepairRequest(
-            request_no=RepairService.generate_request_no(),
-            reporter=reporter,
-            building=building,
-            room=room,
-            problem_type=problem_type,
-            description=description,
-            urgency=urgency,
-        )
-        db.session.add(repair)
-        db.session.flush()
+        repair = None
+        for _ in range(3):
+            repair = RepairRequest(
+                request_no=RepairService.generate_request_no(),
+                reporter=reporter,
+                building=building,
+                room=room,
+                problem_type=problem_type,
+                description=description,
+                urgency=urgency,
+            )
+            db.session.add(repair)
+            try:
+                db.session.flush()
+                break
+            except IntegrityError:
+                db.session.rollback()
+        else:
+            raise ValueError("ไม่สามารถสร้างเลขที่ใบแจ้งซ่อมได้ กรุณาลองอีกครั้ง")
         if files:
             from services.upload_service import UploadService
 

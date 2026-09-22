@@ -10,6 +10,6 @@
   <dl class="box wide"><dt>รายละเอียดปัญหา</dt><dd>{{ repair.description }}</dd></dl>
   {% if repair.result %}<dl class="box wide"><dt>ผลการซ่อม</dt><dd>{{ repair.result }}</dd></dl><dl class="box"><dt>ค่าใช้จ่าย</dt><dd>{{ '%.2f'|format(repair.cost) }} บาท</dd></dl><dl class="box"><dt>วันที่ซ่อมเสร็จ</dt><dd>{{ repair.completion_date|thai_date }}</dd></dl>{% endif %}
 </div>
-<h2>รูปภาพประกอบ</h2><div class="photos">{% for photo in repair.images %}<img src="{{ url_for('static', filename=photo.image_path, _external=pdf_mode|default(false)) }}" alt="{{ photo.image_type|image_type_label }}">{% else %}<span class="muted">ไม่มีรูปภาพ</span>{% endfor %}</div>
+<h2>รูปภาพประกอบ</h2><div class="photos">{% for photo in repair.images %}<img src="{{ image_sources[photo.id] if pdf_mode|default(false) else url_for('repairs.image', image_id=photo.id) }}" alt="{{ photo.image_type|image_type_label }}">{% else %}<span class="muted">ไม่มีรูปภาพ</span>{% endfor %}</div>
 </body></html>
 

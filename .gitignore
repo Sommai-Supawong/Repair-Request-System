@@ -6,6 +6,10 @@ venv/
 instance/
 *.db
 .pytest_cache/
+.coverage
+.DS_Store
+storage/*
+!storage/.gitkeep
 static/uploads/*
 !static/uploads/.gitkeep
 

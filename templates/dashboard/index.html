@@ -1,13 +1,31 @@
 {% extends "base.html" %}
-{% block title %}แดชบอร์ด · ระบบแจ้งซ่อม{% endblock %}
+{% from "macros/ui.html" import status_badge, urgency_badge, empty_state, repair_mobile_card %}
+{% block title %}ภาพรวม · ระบบแจ้งซ่อม{% endblock %}
+{% block page_context %}ภาพรวม{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h3 mb-1">ภาพรวมระบบ</h1><p class="text-secondary mb-0">สรุปรายการแจ้งซ่อมตามสิทธิ์ของคุณ</p></div>{% if current_user.has_role('teacher','admin') %}<a class="btn btn-primary" href="{{ url_for('repairs.create') }}">+ แจ้งซ่อมใหม่</a>{% endif %}</div>
-<div class="row g-3 mb-4">
-{% for key, label, color in [('total','งานทั้งหมด','primary'),('pending','รอรับเรื่อง','warning'),('accepted','รับเรื่องแล้ว','info'),('in_progress','กำลังดำเนินการ','danger'),('completed','ซ่อมเสร็จแล้ว','success')] %}
-<div class="col-6 col-lg"><div class="card stat-card border-0 shadow-sm"><div class="card-body"><span class="text-secondary small text-uppercase">{{ label }}</span><div class="display-6 fw-bold text-{{ color }}">{{ stats[key] }}</div></div></div></div>
-{% endfor %}
-</div>
-<div class="card border-0 shadow-sm"><div class="card-header bg-white py-3"><h2 class="h5 mb-0">รายการแจ้งซ่อมล่าสุด</h2></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>เลขที่ใบแจ้งซ่อม</th><th>สถานที่</th><th>ประเภทปัญหา</th><th>ความเร่งด่วน</th><th>สถานะ</th><th></th></tr></thead><tbody>
-{% for repair in recent %}<tr><td class="fw-semibold">{{ repair.request_no }}</td><td>{{ repair.building }} / {{ repair.room }}</td><td>{{ repair.problem_type|problem_type_label }}</td><td><span class="badge urgency-{{ repair.urgency.value }}">{{ repair.urgency|urgency_label }}</span></td><td><span class="badge status-{{ repair.status.value }}">{{ repair.status|status_label }}</span></td><td><a href="{{ url_for('repairs.detail', repair_id=repair.id) }}" class="btn btn-sm btn-outline-primary">ดูรายละเอียด</a></td></tr>{% else %}<tr><td colspan="6" class="text-center text-secondary py-5">ยังไม่มีรายการแจ้งซ่อม</td></tr>{% endfor %}
-</tbody></table></div></div>
+<header class="page-header dashboard-header">
+  <div><p class="eyebrow">ภาพรวมระบบ</p><h1>สวัสดี, คุณ{{ current_user.fullname }}</h1><p>{% if current_user.has_role('technician') %}ตรวจสอบงานที่ได้รับมอบหมายและอัปเดตความคืบหน้า{% elif current_user.has_role('admin') %}ติดตามภาพรวมงานแจ้งซ่อมและงานที่รอการจัดการ{% else %}ติดตามสถานะงานแจ้งซ่อมของคุณได้ที่นี่{% endif %}</p></div>
+  {% if current_user.has_role('teacher','admin') %}<a class="btn btn-primary page-primary-action" href="{{ url_for('repairs.create') }}"><span aria-hidden="true">＋</span> แจ้งซ่อมใหม่</a>{% endif %}
+</header>
+
+<section aria-labelledby="stats-title"><h2 class="sr-only" id="stats-title">สถิติงานซ่อม</h2>
+  <div class="stats-grid">
+    {% set cards = [('total','งานทั้งหมด','☷','neutral'),('pending','รอรับเรื่อง','◷','pending'),('in_progress','กำลังดำเนินการ','⌁','progress'),('completed','ซ่อมเสร็จแล้ว','✓','completed')] %}
+    {% for key, label, icon, tone in cards %}<article class="stat-card stat-{{ tone }}"><div class="stat-icon" aria-hidden="true">{{ icon }}</div><div><p>{{ label }}</p><strong>{{ stats[key] }}</strong><span>รายการ</span></div></article>{% endfor %}
+  </div>
+</section>
+
+{% if current_user.has_role('admin') and stats['pending'] %}<aside class="attention-card"><div class="attention-icon" aria-hidden="true">!</div><div><strong>มี {{ stats['pending'] }} งานที่รอมอบหมาย</strong><p>ตรวจสอบงานใหม่และมอบหมายเจ้าหน้าที่เพื่อเริ่มดำเนินการ</p></div><a class="btn btn-secondary" href="{{ url_for('repairs.list_repairs', status='pending') }}">ดูงานที่รอมอบหมาย</a></aside>{% endif %}
+
+<section class="section-card" aria-labelledby="recent-title">
+  <div class="section-card-header"><div><h2 id="recent-title">{% if current_user.has_role('technician') %}งานของฉันล่าสุด{% elif current_user.has_role('teacher') %}รายการแจ้งซ่อมล่าสุดของฉัน{% else %}รายการแจ้งซ่อมล่าสุด{% endif %}</h2><p>อัปเดตล่าสุดตามขอบเขตงานของคุณ</p></div><a class="text-link" href="{{ url_for('repairs.list_repairs') }}">ดูทั้งหมด <span aria-hidden="true">›</span></a></div>
+  {% if recent %}
+  <div class="table-wrap desktop-list"><table class="data-table"><thead><tr><th>เลขที่</th><th>สถานที่</th><th>ประเภทปัญหา</th><th>ความเร่งด่วน</th><th>สถานะ</th><th><span class="sr-only">จัดการ</span></th></tr></thead><tbody>
+    {% for repair in recent %}<tr><td><a class="repair-number" href="{{ url_for('repairs.detail', repair_id=repair.id) }}">{{ repair.request_no }}</a></td><td>{{ repair.building }} · ห้อง {{ repair.room }}</td><td>{{ repair.problem_type|problem_type_label }}</td><td>{{ urgency_badge(repair.urgency) }}</td><td>{{ status_badge(repair.status) }}</td><td class="table-action"><a class="btn btn-small btn-secondary" href="{{ url_for('repairs.detail', repair_id=repair.id) }}">ดูงาน</a></td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="mobile-list">{% for repair in recent %}{{ repair_mobile_card(repair, current_user.has_role('admin')) }}{% endfor %}</div>
+  {% else %}
+    {% if current_user.has_role('teacher') %}{{ empty_state('ยังไม่มีรายการแจ้งซ่อม', 'เมื่อพบอุปกรณ์หรือสถานที่ชำรุด คุณสามารถแจ้งปัญหาได้ที่นี่', url_for('repairs.create'), '+ แจ้งซ่อมใหม่') }}{% elif current_user.has_role('technician') %}{{ empty_state('ยังไม่มีงานที่ได้รับมอบหมาย', 'งานใหม่ที่ผู้ดูแลระบบมอบหมายจะแสดงที่นี่') }}{% else %}{{ empty_state('ยังไม่มีรายการแจ้งซ่อม', 'รายการใหม่จากครูและบุคลากรจะแสดงที่นี่', url_for('repairs.create'), '+ แจ้งซ่อมใหม่') }}{% endif %}
+  {% endif %}
+</section>
 {% endblock %}

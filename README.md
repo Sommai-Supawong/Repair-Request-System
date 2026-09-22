@@ -369,16 +369,20 @@ Repair-Request-System/
 ├── templates/              # Jinja2 pages และ shared layout
 ├── static/
 │   ├── css/                # UI styles และ Thai font stack
-│   ├── js/                 # SweetAlert/confirmation behavior
+│   ├── js/                 # Responsive UI, validation และ confirmation behavior
 │   └── uploads/            # Local uploaded images
 ├── tests/                  # pytest authentication/workflow/security tests
+├── storage/                # Render Persistent Disk mount point
+├── start.sh                # Production startup (init tables + Gunicorn)
+├── render.yaml             # Render Blueprint
+├── .python-version         # Python 3.12
 ├── requirements.txt
 └── .env.example
 ```
 
 ## การติดตั้งและเริ่มใช้งาน
 
-ต้องใช้ Python 3.10 ขึ้นไป
+แนะนำ Python 3.12 ตามไฟล์ `.python-version`
 
 ### Windows PowerShell
 
@@ -388,6 +392,7 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 python -m flask --app app init-db
+python -m flask --app app seed-demo
 python -m flask --app app run --debug
 ```
 
@@ -399,6 +404,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
 python -m flask --app app init-db
+python -m flask --app app seed-demo
 python -m flask --app app run --debug
 ```
 
@@ -408,7 +414,7 @@ python -m flask --app app run --debug
 
 ## บัญชีทดลอง
 
-คำสั่ง `init-db` จะสร้างบัญชีต่อไปนี้ โดยรหัสผ่านถูกจัดเก็บเป็น hash
+คำสั่ง `init-db` จะสร้างเฉพาะตารางที่ยังไม่มีและไม่ลบข้อมูลเดิม ใช้คำสั่ง `python -m flask --app app seed-demo` เพื่อสร้างบัญชีทดลองต่อไปนี้แบบ idempotent โดยรหัสผ่านถูกจัดเก็บเป็น hash
 
 | บทบาท | Username | Password |
 |---|---|---|
@@ -428,6 +434,95 @@ python -m flask --app app run --debug
 | `DATABASE_URL` | SQLAlchemy database URI | SQLite `repair.db` |
 | `UPLOAD_FOLDER` | ที่เก็บรูปภาพ | `static/uploads` |
 | `MAX_CONTENT_LENGTH` | ขนาด request สูงสุด | `5242880` bytes (5 MB) |
+| `APP_ENV` | ระบุ environment เมื่อ platform ไม่ได้ตั้ง `RENDER=true` | `development` |
+
+## Deploy on Render
+
+โปรเจกต์เตรียม `render.yaml` และ `start.sh` ไว้แล้วสำหรับ Web Service แบบ Flask + Gunicorn + SQLite บน Persistent Disk
+
+### Prerequisites
+
+- GitHub repository ที่มี source code ชุดนี้
+- บัญชี Render และแผนที่รองรับ Persistent Disk
+
+### Render Service
+
+ใช้ Render Blueprint จาก `render.yaml` หรือกำหนด Web Service ด้วยค่าต่อไปนี้:
+
+```text
+Service Type: Web Service
+Runtime: Python
+Build Command: pip install -r requirements.txt
+Start Command: bash start.sh
+Health Check Path: /health
+```
+
+`start.sh` เรียก `init-db` ซึ่งใช้ `db.create_all()` เท่านั้น จากนั้นเริ่ม `python3 -m gunicorn app:app` ที่ `0.0.0.0:$PORT` คำสั่งนี้เพิ่มเฉพาะตารางที่ขาดและไม่ลบข้อมูลหรือสร้างบัญชีทดลอง
+
+### Environment Variables
+
+ตั้งค่าต่อไปนี้ใน Render Dashboard (`SECRET_KEY` ต้องเป็นค่าสุ่มจริงและห้าม commit):
+
+```env
+SECRET_KEY=<random-production-secret>
+APP_ENV=production
+DATABASE_URL=sqlite:////opt/render/project/src/storage/repair.db
+UPLOAD_FOLDER=/opt/render/project/src/storage/uploads
+MAX_CONTENT_LENGTH=5242880
+```
+
+Render ตั้ง `RENDER=true` ให้อัตโนมัติ ระบบจึงเปิด secure session cookies และเชื่อถือ proxy headers หนึ่งชั้น หาก deploy บน platform อื่นให้ใช้ `APP_ENV=production` และตั้ง `TRUST_PROXY_HEADERS=true` เมื่อมี trusted reverse proxy หนึ่งชั้น
+
+### Persistent Disk
+
+แนบ Persistent Disk ด้วยค่าต่อไปนี้:
+
+```text
+Mount Path: /opt/render/project/src/storage
+Database:   /opt/render/project/src/storage/repair.db
+Uploads:    /opt/render/project/src/storage/uploads
+```
+
+ฐานข้อมูลและโฟลเดอร์อัปโหลดจะถูกสร้างอัตโนมัติหากยังไม่มี รูปภาพถูกส่งผ่าน route ที่ตรวจสอบการเข้าสู่ระบบและสิทธิ์เข้าดูใบแจ้งซ่อม ไม่ได้เปิดเผย path บนดิสก์โดยตรง
+
+### First Deployment and Demo Seed
+
+การ deploy ครั้งแรกจะสร้าง schema โดยอัตโนมัติผ่าน `start.sh` แต่จะไม่สร้างบัญชีใด ๆ ให้เปิด Render Shell และสร้างผู้ดูแลระบบคนแรกแบบ interactive:
+
+```bash
+python3 -m flask --app app create-admin
+```
+
+คำสั่งจะถาม username, ชื่อ, อีเมล และรหัสผ่านโดยไม่แสดงรหัสผ่านบนหน้าจอ หากต้องการบัญชีทดลองสำหรับห้องเรียนจึงค่อยรัน:
+
+```bash
+python -m flask --app app seed-demo
+```
+
+บัญชีเหล่านี้เป็น demo-only ควรเปลี่ยนรหัสผ่านหรือปิดใช้งานก่อนเปิดระบบจริง การรันคำสั่งซ้ำจะไม่สร้างบัญชีซ้ำและไม่ reset รหัสผ่านเดิม
+
+### Troubleshooting
+
+- **Gunicorn import error:** ตรวจว่า Start Command เป็น `bash start.sh` และ build ติดตั้ง `requirements.txt` สำเร็จ
+- **SECRET_KEY missing:** ตั้ง `SECRET_KEY` ใน Render Environment; production จะหยุดทันทีพร้อมข้อความชัดเจนหากไม่มีค่า
+- **Database directory/permission error:** ตรวจว่า Persistent Disk mount ที่ `/opt/render/project/src/storage` และ `DATABASE_URL` มี slash สี่ตัวหลัง `sqlite:`
+- **Uploads not displaying:** ตรวจ `UPLOAD_FOLDER` และ disk mount; ไฟล์ต้องอยู่ใน `/opt/render/project/src/storage/uploads`
+- **WeasyPrint unavailable:** ใช้หน้าพิมพ์ของเบราว์เซอร์และเลือก Save as PDF; ระบบจะ fallback โดยไม่ทำให้แอปล่ม
+- **SQLite locked:** ใช้ Web Service instance เดียวและ Gunicorn worker เดียวตามค่าเริ่มต้นของ `start.sh`
+
+### Deployment Checklist
+
+- [ ] Tests pass
+- [ ] `SECRET_KEY` configured
+- [ ] Persistent Disk attached
+- [ ] `DATABASE_URL` configured
+- [ ] `UPLOAD_FOLDER` configured
+- [ ] Debug disabled
+- [ ] Gunicorn starts
+- [ ] Database initialized
+- [ ] Login works
+- [ ] Upload works
+- [ ] Full repair workflow works
 
 ## การทดสอบ
 

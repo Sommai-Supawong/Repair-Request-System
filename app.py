@@ -1,9 +1,12 @@
 import os
+from pathlib import Path
 
 import click
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import CSRFError
+from sqlalchemy.engine import make_url
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
 from extensions import csrf, db, login_manager
@@ -18,11 +21,27 @@ from localization import (
 from routes import admin_bp, auth_bp, dashboard_bp, repairs_bp
 
 
+def _ensure_storage_directories(app: Flask) -> None:
+    upload_folder = Path(app.config["UPLOAD_FOLDER"])
+    upload_folder.mkdir(parents=True, exist_ok=True)
+
+    database_url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+    if database_url.drivername.startswith("sqlite") and database_url.database not in (None, "", ":memory:"):
+        database_path = Path(database_url.database)
+        if not database_path.is_absolute():
+            database_path = Path(app.instance_path) / database_path
+        database_path.parent.mkdir(parents=True, exist_ok=True)
+
+
 def create_app(config_object=None):
     app = Flask(__name__)
     app.config.from_object(config_object or Config)
+    if not app.config.get("SECRET_KEY"):
+        raise RuntimeError("SECRET_KEY is required in production. Set it in the environment.")
+    if app.config.get("TRUST_PROXY_HEADERS"):
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     os.makedirs(app.instance_path, exist_ok=True)
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    _ensure_storage_directories(app)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -62,6 +81,14 @@ def create_app(config_object=None):
     def index():
         return redirect(url_for("dashboard.index" if current_user.is_authenticated else "auth.login"))
 
+    @app.get("/health")
+    def health():
+        return jsonify(status="ok")
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template("errors/400.html"), 400
+
     @app.errorhandler(403)
     def forbidden(error):
         return render_template("errors/403.html"), 403
@@ -84,15 +111,40 @@ def create_app(config_object=None):
         return render_template("errors/csrf.html"), 400
 
     @app.cli.command("init-db")
-    @click.option("--seed/--no-seed", default=True, help="Create demo accounts.")
-    def init_db(seed):
-        """Create database tables and optional demo users."""
+    def init_db():
+        """Create missing database tables without deleting or seeding data."""
+        db.create_all()
+        click.echo("Database initialized.")
+
+    @app.cli.command("seed-demo")
+    def seed_demo():
+        """Create demo accounts if they do not already exist."""
         from services import UserService
 
         db.create_all()
-        if seed:
-            UserService.seed_demo_users()
-        click.echo("Database initialized.")
+        UserService.seed_demo_users()
+        click.echo("Demo accounts are ready.")
+
+    @app.cli.command("create-admin")
+    @click.option("--username", prompt="Admin username")
+    @click.option("--fullname", prompt="Admin full name")
+    @click.option("--email", prompt="Admin email")
+    @click.option(
+        "--password",
+        prompt="Admin password",
+        hide_input=True,
+        confirmation_prompt=True,
+    )
+    def create_admin(username, fullname, email, password):
+        """Create the first production administrator interactively."""
+        from services import UserService
+
+        db.create_all()
+        try:
+            UserService.create(username, password, fullname, email, "admin")
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+        click.echo(f"Administrator {username.strip().lower()} created.")
 
     return app
 
@@ -101,4 +153,5 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    debug_enabled = os.getenv("FLASK_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+    app.run(debug=debug_enabled and not app.config.get("PRODUCTION", False))

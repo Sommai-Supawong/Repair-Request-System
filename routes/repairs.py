@@ -1,9 +1,11 @@
-from flask import Blueprint, abort, flash, make_response, redirect, render_template, request, url_for
+from pathlib import Path
+
+from flask import Blueprint, abort, current_app, flash, make_response, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user, login_required
 
 from enums import ImageType, ProblemType, RequestStatus, Urgency, UserRole
 from extensions import db
-from models import RepairRequest, User
+from models import RepairImage, RepairRequest, User
 from routes.decorators import roles_required
 from services import RepairService
 from services.export_service import ExportService
@@ -57,6 +59,18 @@ def detail(repair_id):
     return render_template(
         "repairs/detail.html", repair=repair, technicians=technicians, image_types=ImageType
     )
+
+
+@repairs_bp.get("/repair-image/<int:image_id>")
+@login_required
+def image(image_id):
+    repair_image = db.get_or_404(RepairImage, image_id)
+    if not RepairService.can_view(current_user, repair_image.repair):
+        abort(403)
+    filename = Path(repair_image.image_path).name
+    if not filename or filename != repair_image.image_path.replace("\\", "/").rsplit("/", 1)[-1]:
+        abort(404)
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
 
 
 @repairs_bp.post("/repair/<int:repair_id>/assign")
@@ -135,13 +149,21 @@ def pdf(repair_id):
     try:
         from weasyprint import HTML
 
-        html = render_template("repairs/print.html", repair=repair, pdf_mode=True)
+        upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
+        image_sources = {
+            photo.id: (upload_folder / Path(photo.image_path).name).resolve().as_uri()
+            for photo in repair.images
+        }
+        html = render_template(
+            "repairs/print.html", repair=repair, pdf_mode=True, image_sources=image_sources
+        )
         data = HTML(string=html, base_url=request.url_root).write_pdf()
         response = make_response(data)
         response.headers["Content-Type"] = "application/pdf"
         response.headers["Content-Disposition"] = f'attachment; filename="{repair.request_no}.pdf"'
         return response
-    except (ImportError, OSError):
+    except Exception:
+        current_app.logger.exception("PDF generation failed for repair %s", repair.request_no)
         flash("ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาใช้คำสั่งพิมพ์หรือบันทึกเป็น PDF จากเบราว์เซอร์", "warning")
         return redirect(url_for("repairs.print_detail", repair_id=repair.id))
 

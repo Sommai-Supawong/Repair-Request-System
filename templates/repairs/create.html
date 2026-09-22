@@ -1,13 +1,24 @@
 {% extends "base.html" %}
 {% block title %}แจ้งซ่อมใหม่ · ระบบแจ้งซ่อม{% endblock %}
+{% block page_context %}แจ้งซ่อมใหม่{% endblock %}
 {% block content %}
-<div class="row justify-content-center"><div class="col-xl-8"><div class="mb-4"><h1 class="h3">แจ้งซ่อมใหม่</h1><p class="text-secondary">ระบุรายละเอียดปัญหาและแนบรูปก่อนซ่อมที่เห็นปัญหาได้ชัดเจน</p></div>
-<form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="card-body p-4"><div class="row g-3">
-<div class="col-md-6"><label class="form-label">อาคาร *</label><input class="form-control" name="building" value="{{ request.form.get('building','') }}" placeholder="เช่น อาคาร 3" maxlength="100" required></div>
-<div class="col-md-6"><label class="form-label">ห้อง *</label><input class="form-control" name="room" value="{{ request.form.get('room','') }}" placeholder="เช่น 301" maxlength="100" required></div>
-<div class="col-md-6"><label class="form-label">ประเภทปัญหา *</label><select class="form-select" name="problem_type" required><option value="">เลือกประเภทปัญหา…</option>{% for item in problem_types %}<option value="{{ item.value }}">{{ item|problem_type_label }}</option>{% endfor %}</select></div>
-<div class="col-md-6"><label class="form-label">ระดับความเร่งด่วน *</label><select class="form-select" name="urgency" required><option value="">เลือกระดับความเร่งด่วน…</option>{% for item in urgencies %}<option value="{{ item.value }}">{{ item|urgency_label }}</option>{% endfor %}</select></div>
-<div class="col-12"><label class="form-label">รายละเอียดปัญหา *</label><textarea class="form-control" name="description" rows="5" placeholder="อธิบายอาการหรือปัญหาที่พบ" required>{{ request.form.get('description','') }}</textarea></div>
-<div class="col-12"><label class="form-label">รูปภาพประกอบก่อนซ่อม</label><input class="form-control" type="file" name="images" accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif" multiple><div class="form-text">รองรับ JPG, PNG และ GIF ขนาดคำขอรวมไม่เกิน 5 MB</div></div>
-</div></div><div class="card-footer bg-white p-4 d-flex gap-2 justify-content-end"><a class="btn btn-light" href="{{ url_for('repairs.list_repairs') }}">ยกเลิก</a><button class="btn btn-primary">ส่งใบแจ้งซ่อม</button></div></form></div></div>
+<div class="narrow-content">
+  <header class="page-header"><div><a class="back-link" href="{{ url_for('repairs.list_repairs') }}">‹ กลับ</a><h1>แจ้งซ่อมใหม่</h1><p>กรอกข้อมูลที่จำเป็นเพื่อให้เจ้าหน้าที่ตรวจสอบและดำเนินการได้รวดเร็ว</p></div></header>
+  <form method="post" enctype="multipart/form-data" class="form-card" data-validate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset class="form-section"><legend><span>1</span> สถานที่</legend><p class="section-help">ระบุตำแหน่งที่พบปัญหาให้ชัดเจน</p><div class="form-grid">
+      <div class="form-group"><label class="form-label" for="building">อาคาร <span class="required">*</span></label><input class="form-control" id="building" name="building" value="{{ request.form.get('building','') }}" placeholder="เช่น อาคาร 3" maxlength="100" required><p class="field-error" aria-live="polite"></p></div>
+      <div class="form-group"><label class="form-label" for="room">ห้อง <span class="required">*</span></label><input class="form-control" id="room" name="room" value="{{ request.form.get('room','') }}" placeholder="เช่น 301" maxlength="100" required><p class="field-error" aria-live="polite"></p></div>
+    </div></fieldset>
+    <fieldset class="form-section"><legend><span>2</span> ปัญหาที่พบ</legend><p class="section-help">เลือกประเภทและอธิบายอาการที่พบ</p><div class="form-grid">
+      <div class="form-group"><label class="form-label" for="problem_type">ประเภทปัญหา <span class="required">*</span></label><select class="form-select" id="problem_type" name="problem_type" required><option value="">เลือกประเภทปัญหา</option>{% for item in problem_types %}<option value="{{ item.value }}" {% if request.form.get('problem_type') == item.value %}selected{% endif %}>{{ item|problem_type_label }}</option>{% endfor %}</select><p class="field-error" aria-live="polite"></p></div>
+      <div class="form-group"><label class="form-label" for="urgency">ความเร่งด่วน <span class="required">*</span></label><select class="form-select" id="urgency" name="urgency" required><option value="">เลือกระดับความเร่งด่วน</option>{% for item in urgencies %}<option value="{{ item.value }}" {% if request.form.get('urgency') == item.value %}selected{% endif %}>{{ item|urgency_label }}</option>{% endfor %}</select><p class="field-hint">เลือก “สูง” เมื่อกระทบความปลอดภัยหรือการเรียนการสอน</p><p class="field-error" aria-live="polite"></p></div>
+      <div class="form-group full-span"><label class="form-label" for="description">รายละเอียดปัญหา <span class="required">*</span></label><textarea class="form-control" id="description" name="description" rows="5" placeholder="อธิบายอาการ สิ่งที่พบ หรือช่วงเวลาที่เกิดปัญหา" required>{{ request.form.get('description','') }}</textarea><p class="field-error" aria-live="polite"></p></div>
+    </div></fieldset>
+    <fieldset class="form-section"><legend><span>3</span> รูปภาพประกอบ</legend><p class="section-help">รูปที่เห็นปัญหาชัดเจนจะช่วยให้เจ้าหน้าที่ประเมินงานได้เร็วขึ้น</p>
+      <label class="upload-zone" for="repair-images"><span class="upload-icon" aria-hidden="true">＋</span><strong>เพิ่มรูปภาพก่อนซ่อม</strong><span>เลือกได้หลายรูป · JPG, PNG หรือ GIF · รวมไม่เกิน 5 MB</span></label><input class="visually-hidden-input" id="repair-images" type="file" name="images" accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif" multiple data-image-input><div class="image-preview" data-image-preview aria-live="polite"></div>
+    </fieldset>
+    <div class="form-actions"><a class="btn btn-secondary" href="{{ url_for('repairs.list_repairs') }}">ยกเลิก</a><button class="btn btn-primary" type="submit">ส่งใบแจ้งซ่อม</button></div>
+  </form>
+</div>
 {% endblock %}

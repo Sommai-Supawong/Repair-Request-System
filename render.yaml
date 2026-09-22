@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: school-repair-system
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////opt/render/project/src/storage/repair.db
+      - key: UPLOAD_FOLDER
+        value: /opt/render/project/src/storage/uploads
+      - key: MAX_CONTENT_LENGTH
+        value: "5242880"
+    disk:
+      name: repair-storage
+      mountPath: /opt/render/project/src/storage
+      sizeGB: 1

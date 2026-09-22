@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
-python3 -m flask --app app init-db
-exec python3 -m gunicorn app:app --bind "0.0.0.0:${PORT:-10000}" --workers "${WEB_CONCURRENCY:-1}" --access-logfile - --error-logfile -
+echo "Initializing database..."
+python -m flask --app app init-db
+
+echo "Creating demo users..."
+python -m flask --app app seed-demo
+
+echo "Starting Gunicorn..."
+exec gunicorn "app:create_app()" --bind 0.0.0.0:${PORT:-10000}

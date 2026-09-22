@@ -1,0 +1,34 @@
+{% macro status_badge(status) -%}
+<span class="status-badge status-{{ status.value }}"><span class="badge-dot" aria-hidden="true"></span>{{ status|status_label }}</span>
+{%- endmacro %}
+
+{% macro urgency_badge(urgency) -%}
+<span class="urgency-badge urgency-{{ urgency.value }}">{{ urgency|urgency_label }}</span>
+{%- endmacro %}
+
+{% macro empty_state(title, description='', action_url=None, action_label=None) -%}
+<div class="empty-state">
+  <div class="empty-state-icon" aria-hidden="true">○</div>
+  <h3>{{ title }}</h3>
+  {% if description %}<p>{{ description }}</p>{% endif %}
+  {% if action_url and action_label %}<a class="btn btn-primary" href="{{ action_url }}">{{ action_label }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro repair_mobile_card(repair) -%}
+<article class="repair-mobile-card">
+  <div class="d-flex justify-content-between align-items-start gap-2">
+    <a class="repair-number" href="{{ url_for('repairs.detail', repair_id=repair.id) }}">{{ repair.request_no }}</a>
+    {{ urgency_badge(repair.urgency) }}
+  </div>
+  <h3>{{ repair.problem_type|problem_type_label }}</h3>
+  <p class="repair-location">{{ repair.building }} · ห้อง {{ repair.room }}</p>
+  <div class="my-3">{{ status_badge(repair.status) }}</div>
+  <dl class="mobile-meta">
+    <div><dt>ผู้รับผิดชอบ</dt><dd>{{ repair.technician.fullname if repair.technician else 'ยังไม่มอบหมาย' }}</dd></div>
+    <div><dt>วันที่แจ้ง</dt><dd>{{ repair.created_at|thai_date }}</dd></div>
+  </dl>
+  <a class="mobile-card-link" href="{{ url_for('repairs.detail', repair_id=repair.id) }}">ดูรายละเอียด <span aria-hidden="true">›</span></a>
+</article>
+{%- endmacro %}
+

@@ -1,0 +1,30 @@
+{% set endpoint = request.endpoint or '' %}
+<nav class="side-nav" aria-label="เมนูหลัก">
+  <p class="nav-section-label">เมนูหลัก</p>
+  <a class="side-nav-link {{ 'active' if endpoint == 'dashboard.index' }}" href="{{ url_for('dashboard.index') }}">
+    <span class="nav-icon" aria-hidden="true">⌂</span><span>ภาพรวม</span>
+  </a>
+  {% if current_user.has_role('teacher', 'admin') %}
+  <a class="side-nav-link {{ 'active' if endpoint == 'repairs.create' }}" href="{{ url_for('repairs.create') }}">
+    <span class="nav-icon" aria-hidden="true">＋</span><span>แจ้งซ่อมใหม่</span>
+  </a>
+  {% endif %}
+  <a class="side-nav-link {{ 'active' if endpoint in ['repairs.list_repairs', 'repairs.detail'] }}" href="{{ url_for('repairs.list_repairs') }}">
+    <span class="nav-icon" aria-hidden="true">☷</span><span>รายการแจ้งซ่อม</span>
+  </a>
+  {% if current_user.has_role('admin') %}
+  <p class="nav-section-label mt-4">ผู้ดูแลระบบ</p>
+  <a class="side-nav-link {{ 'active' if endpoint.startswith('admin.') }}" href="{{ url_for('admin.users') }}">
+    <span class="nav-icon" aria-hidden="true">◎</span><span>จัดการผู้ใช้งาน</span>
+  </a>
+  {% endif %}
+</nav>
+<div class="sidebar-account">
+  <div class="user-avatar" aria-hidden="true">{{ current_user.fullname[:1]|upper }}</div>
+  <div class="account-copy"><strong>{{ current_user.fullname }}</strong><span>{{ current_user.role|role_label }}</span></div>
+  <form method="post" action="{{ url_for('auth.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="logout-button" title="ออกจากระบบ" aria-label="ออกจากระบบ">↪</button>
+  </form>
+</div>
+

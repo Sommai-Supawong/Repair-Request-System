@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}แจ้งซ่อมใหม่ · ระบบแจ้งซ่อม{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-xl-8"><div class="mb-4"><h1 class="h3">แจ้งซ่อมใหม่</h1><p class="text-secondary">ระบุรายละเอียดปัญหาและแนบรูปก่อนซ่อมที่เห็นปัญหาได้ชัดเจน</p></div>
+<form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="card-body p-4"><div class="row g-3">
+<div class="col-md-6"><label class="form-label">อาคาร *</label><input class="form-control" name="building" value="{{ request.form.get('building','') }}" placeholder="เช่น อาคาร 3" maxlength="100" required></div>
+<div class="col-md-6"><label class="form-label">ห้อง *</label><input class="form-control" name="room" value="{{ request.form.get('room','') }}" placeholder="เช่น 301" maxlength="100" required></div>
+<div class="col-md-6"><label class="form-label">ประเภทปัญหา *</label><select class="form-select" name="problem_type" required><option value="">เลือกประเภทปัญหา…</option>{% for item in problem_types %}<option value="{{ item.value }}">{{ item|problem_type_label }}</option>{% endfor %}</select></div>
+<div class="col-md-6"><label class="form-label">ระดับความเร่งด่วน *</label><select class="form-select" name="urgency" required><option value="">เลือกระดับความเร่งด่วน…</option>{% for item in urgencies %}<option value="{{ item.value }}">{{ item|urgency_label }}</option>{% endfor %}</select></div>
+<div class="col-12"><label class="form-label">รายละเอียดปัญหา *</label><textarea class="form-control" name="description" rows="5" placeholder="อธิบายอาการหรือปัญหาที่พบ" required>{{ request.form.get('description','') }}</textarea></div>
+<div class="col-12"><label class="form-label">รูปภาพประกอบก่อนซ่อม</label><input class="form-control" type="file" name="images" accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif" multiple><div class="form-text">รองรับ JPG, PNG และ GIF ขนาดคำขอรวมไม่เกิน 5 MB</div></div>
+</div></div><div class="card-footer bg-white p-4 d-flex gap-2 justify-content-end"><a class="btn btn-light" href="{{ url_for('repairs.list_repairs') }}">ยกเลิก</a><button class="btn btn-primary">ส่งใบแจ้งซ่อม</button></div></form></div></div>
+{% endblock %}

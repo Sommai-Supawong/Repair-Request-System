@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}จัดการผู้ใช้งาน · ระบบแจ้งซ่อม{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">จัดการผู้ใช้งาน</h1>
+<div class="row g-4"><div class="col-lg-4">
+  <form method="post" class="card border-0 shadow-sm sticky-lg-top" style="top:1rem"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card-header bg-white py-3"><h2 class="h5 mb-0">เพิ่มผู้ใช้งาน</h2></div>
+    <div class="card-body">
+      {% for name,label,type,placeholder in [('username','ชื่อผู้ใช้','text','กรอกชื่อผู้ใช้'),('fullname','ชื่อ-นามสกุล','text','กรอกชื่อ-นามสกุล'),('email','อีเมล','email','กรอกอีเมล'),('password','รหัสผ่าน','password','อย่างน้อย 8 ตัวอักษร')] %}<div class="mb-3"><label class="form-label">{{ label }}</label><input class="form-control" type="{{ type }}" name="{{ name }}" placeholder="{{ placeholder }}" required></div>{% endfor %}
+      <div class="mb-3"><label class="form-label">สิทธิ์ผู้ใช้งาน</label><select class="form-select" name="role" required>{% for role in roles %}<option value="{{ role.value }}">{{ role|role_label }}</option>{% endfor %}</select></div>
+      <button class="btn btn-primary w-100">สร้างผู้ใช้งาน</button>
+    </div>
+  </form>
+</div><div class="col-lg-8"><div class="accordion" id="users">
+  {% for user in users %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#user{{ user.id }}"><span class="fw-semibold">{{ user.fullname }}</span><span class="badge bg-secondary ms-2">{{ user.role|role_label }}</span>{% if not user.is_active %}<span class="badge bg-danger ms-2">ปิดใช้งาน</span>{% endif %}</button></h2>
+    <div id="user{{ user.id }}" class="accordion-collapse collapse" data-bs-parent="#users"><div class="accordion-body"><form method="post" action="{{ url_for('admin.edit_user', user_id=user.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="row g-3">
+      <div class="col-md-6"><label class="form-label">ชื่อ-นามสกุล</label><input class="form-control" name="fullname" value="{{ user.fullname }}" required></div>
+      <div class="col-md-6"><label class="form-label">อีเมล</label><input class="form-control" type="email" name="email" value="{{ user.email }}" required></div>
+      <div class="col-md-6"><label class="form-label">สิทธิ์ผู้ใช้งาน</label><select class="form-select" name="role">{% for role in roles %}<option value="{{ role.value }}" {% if user.role==role %}selected{% endif %}>{{ role|role_label }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">รหัสผ่านใหม่ <small class="text-secondary">(ไม่บังคับ)</small></label><input class="form-control" type="password" name="password"></div>
+      <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" id="active{{ user.id }}" {% if user.is_active %}checked{% endif %}><label class="form-check-label" for="active{{ user.id }}">เปิดใช้งานบัญชี</label></div></div>
+      <div class="col-12"><button class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button></div>
+    </div></form></div></div>
+  </div>{% else %}<p class="text-secondary">ยังไม่มีผู้ใช้งาน</p>{% endfor %}
+</div></div></div>
+{% endblock %}

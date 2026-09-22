@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="th"><head><meta charset="UTF-8"><title>{{ repair.request_no }} · รายงานการซ่อม</title><style>@page{size:A4;margin:18mm}body{font-family:"Sarabun","Noto Sans Thai","Segoe UI",sans-serif;color:#222;line-height:1.5}h1{margin-bottom:0}.muted{color:#666}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}.box{border:1px solid #bbb;padding:12px;border-radius:6px}.wide{grid-column:1/-1}dt{font-size:12px;text-transform:uppercase;color:#666}dd{margin:3px 0 0}.photos{display:flex;gap:10px;flex-wrap:wrap}.photos img{width:170px;height:120px;object-fit:cover}button{padding:10px 18px}@media print{button{display:none}}</style></head><body>
+{% if not pdf_mode %}<button onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button>{% endif %}
+<h1>รายงานการซ่อม</h1><div class="muted">{{ repair.request_no }} · {{ repair.status|status_label }}</div>
+<div class="grid">
+  <dl class="box"><dt>ผู้แจ้ง</dt><dd>{{ repair.reporter.fullname }}</dd></dl>
+  <dl class="box"><dt>สถานที่</dt><dd>{{ repair.building }} / ห้อง {{ repair.room }}</dd></dl>
+  <dl class="box"><dt>ปัญหา</dt><dd>{{ repair.problem_type|problem_type_label }} · เร่งด่วนระดับ{{ repair.urgency|urgency_label }}</dd></dl>
+  <dl class="box"><dt>เจ้าหน้าที่ซ่อม</dt><dd>{{ repair.technician.fullname if repair.technician else 'ยังไม่มอบหมาย' }}</dd></dl>
+  <dl class="box wide"><dt>รายละเอียดปัญหา</dt><dd>{{ repair.description }}</dd></dl>
+  {% if repair.result %}<dl class="box wide"><dt>ผลการซ่อม</dt><dd>{{ repair.result }}</dd></dl><dl class="box"><dt>ค่าใช้จ่าย</dt><dd>{{ '%.2f'|format(repair.cost) }} บาท</dd></dl><dl class="box"><dt>วันที่ซ่อมเสร็จ</dt><dd>{{ repair.completion_date|thai_date }}</dd></dl>{% endif %}
+</div>
+<h2>รูปภาพประกอบ</h2><div class="photos">{% for photo in repair.images %}<img src="{{ url_for('static', filename=photo.image_path, _external=pdf_mode|default(false)) }}" alt="{{ photo.image_type|image_type_label }}">{% else %}<span class="muted">ไม่มีรูปภาพ</span>{% endfor %}</div>
+</body></html>
+

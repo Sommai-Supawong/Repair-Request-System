@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}เข้าสู่ระบบ · ระบบแจ้งซ่อม{% endblock %}
+{% block content %}
+<div class="login-shell">
+  <div class="card border-0 shadow-lg login-card">
+    <div class="card-body p-4 p-md-5">
+      <div class="brand-mark mb-3">SR</div>
+      <h1 class="h3 fw-bold">ระบบแจ้งซ่อมภายในโรงเรียน</h1>
+      <p class="text-secondary mb-4">เข้าสู่ระบบเพื่อแจ้งซ่อมและติดตามการดำเนินงาน</p>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3"><label class="form-label" for="username">ชื่อผู้ใช้</label><input class="form-control form-control-lg" id="username" name="username" placeholder="กรอกชื่อผู้ใช้" required autofocus></div>
+        <div class="mb-3"><label class="form-label" for="password">รหัสผ่าน</label><input class="form-control form-control-lg" type="password" id="password" name="password" placeholder="กรอกรหัสผ่าน" required></div>
+        <div class="form-check mb-4"><input class="form-check-input" type="checkbox" id="remember" name="remember"><label class="form-check-label" for="remember">จดจำการเข้าสู่ระบบ</label></div>
+        <button class="btn btn-primary btn-lg w-100">เข้าสู่ระบบ</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

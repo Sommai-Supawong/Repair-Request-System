@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}แดชบอร์ด · ระบบแจ้งซ่อม{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h3 mb-1">ภาพรวมระบบ</h1><p class="text-secondary mb-0">สรุปรายการแจ้งซ่อมตามสิทธิ์ของคุณ</p></div>{% if current_user.has_role('teacher','admin') %}<a class="btn btn-primary" href="{{ url_for('repairs.create') }}">+ แจ้งซ่อมใหม่</a>{% endif %}</div>
+<div class="row g-3 mb-4">
+{% for key, label, color in [('total','งานทั้งหมด','primary'),('pending','รอรับเรื่อง','warning'),('accepted','รับเรื่องแล้ว','info'),('in_progress','กำลังดำเนินการ','danger'),('completed','ซ่อมเสร็จแล้ว','success')] %}
+<div class="col-6 col-lg"><div class="card stat-card border-0 shadow-sm"><div class="card-body"><span class="text-secondary small text-uppercase">{{ label }}</span><div class="display-6 fw-bold text-{{ color }}">{{ stats[key] }}</div></div></div></div>
+{% endfor %}
+</div>
+<div class="card border-0 shadow-sm"><div class="card-header bg-white py-3"><h2 class="h5 mb-0">รายการแจ้งซ่อมล่าสุด</h2></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>เลขที่ใบแจ้งซ่อม</th><th>สถานที่</th><th>ประเภทปัญหา</th><th>ความเร่งด่วน</th><th>สถานะ</th><th></th></tr></thead><tbody>
+{% for repair in recent %}<tr><td class="fw-semibold">{{ repair.request_no }}</td><td>{{ repair.building }} / {{ repair.room }}</td><td>{{ repair.problem_type|problem_type_label }}</td><td><span class="badge urgency-{{ repair.urgency.value }}">{{ repair.urgency|urgency_label }}</span></td><td><span class="badge status-{{ repair.status.value }}">{{ repair.status|status_label }}</span></td><td><a href="{{ url_for('repairs.detail', repair_id=repair.id) }}" class="btn btn-sm btn-outline-primary">ดูรายละเอียด</a></td></tr>{% else %}<tr><td colspan="6" class="text-center text-secondary py-5">ยังไม่มีรายการแจ้งซ่อม</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}
